@@ -5,12 +5,16 @@ class HealthEnv:
     def __init__(self):
         self.state_data = {}
         self.done = False
+        self.prev_heart_rate = None
+        self.prev_temperature = None
 
     def reset(self):
         self.state_data = {
             "heart_rate": random.randint(70, 90),
             "temperature": round(random.uniform(36.5, 37.5), 1)
         }
+        self.prev_heart_rate = self.state_data["heart_rate"]
+        self.prev_temperature = self.state_data["temperature"]
         self.done = False
         return self.state_data
 
@@ -21,25 +25,57 @@ class HealthEnv:
         hr = self.state_data["heart_rate"]
         temp = self.state_data["temperature"]
 
-        # Simulate changes
-        hr += random.randint(-5, 10)
-        temp += round(random.uniform(-0.2, 0.5), 1)
+        # Simulate realistic change
+        hr += random.randint(-3, 8)
+        temp += round(random.uniform(-0.1, 0.4), 1)
+
+        # Clamp values
+        hr = max(50, min(180, hr))
+        temp = max(35.0, min(42.0, temp))
+
+        # Trend detection
+        hr_trend = hr - self.prev_heart_rate
+        temp_trend = temp - self.prev_temperature
+
+        self.prev_heart_rate = hr
+        self.prev_temperature = temp
 
         self.state_data = {
             "heart_rate": hr,
-            "temperature": temp
+            "temperature": temp,
+            "hr_trend": hr_trend,
+            "temp_trend": temp_trend
         }
 
         reward = 0.0
 
+        # Emergency condition
         if hr > 120 or temp > 39:
-            reward = 1.0 if action == 2 else 0.0
-        elif hr > 100 or temp > 38:
-            reward = 0.7 if action == 1 else 0.2
-        else:
-            reward = 1.0 if action == 0 else 0.3
+            if action == 2:
+                reward = 1.0
+            elif action == 1:
+                reward = 0.5
+            else:
+                reward = 0.0
 
-        if hr > 130 or temp > 40:
+        # Warning condition
+        elif hr > 100 or temp > 38 or hr_trend > 5:
+            if action == 1:
+                reward = 0.8
+            elif action == 2:
+                reward = 0.4
+            else:
+                reward = 0.2
+
+        # Normal condition
+        else:
+            if action == 0:
+                reward = 1.0
+            else:
+                reward = 0.3
+
+        # Done condition
+        if hr > 140 or temp > 41:
             self.done = True
 
-        return self.state_data, reward, self.done, {}
+        return self.state_data, float(reward), self.done, {}
