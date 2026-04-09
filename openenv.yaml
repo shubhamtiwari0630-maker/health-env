@@ -1,7 +1,7 @@
 name: health-monitoring-env
 version: 1.0
 
-description: AI environment for health monitoring
+description: AI environment for health monitoring and decision making
 
 environment:
   state_space:
@@ -28,12 +28,15 @@ environment:
 tasks:
   - name: easy
     description: Detect high heart rate
+    success_condition: heart_rate > 100
 
   - name: medium
-    description: Detect trend increase
+    description: Detect increasing trend
+    success_condition: heart_rate shows continuous increase
 
   - name: hard
     description: Multi-sensor decision
+    success_condition: heart_rate > 120 OR temperature > 39
 
 api:
   reset: /reset
